@@ -7,3 +7,4 @@ checkmate/blender/*.blend1
 checkmate/audio/sfx/
 checkmate/audio/*.wav
 __pycache__/
+checkmate/out/*.mp4
