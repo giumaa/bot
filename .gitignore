@@ -1,0 +1,9 @@
+# generated media (reproducible from the scripts)
+checkmate/render/frames/
+checkmate/render/*.blend
+checkmate/render/*.log
+checkmate/blender/*.blend
+checkmate/blender/*.blend1
+checkmate/audio/sfx/
+checkmate/audio/*.wav
+__pycache__/
