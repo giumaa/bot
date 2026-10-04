@@ -1368,3 +1368,152 @@ b.g {
 #win * {
   backdrop-filter: none !important;
 }
+
+/* =================================================================================================
+   9:16 (Reels / Shorts): html[data-format='vertical'] — stage 1080×1920, key text kept roughly
+   within y 240–1500 so the platform's caption/buttons overlay doesn't cover it
+   ================================================================================================= */
+[data-format='vertical'] .hook-line {
+  font-size: 80px;
+}
+[data-format='vertical'] .hook-en {
+  font-size: 27px;
+}
+[data-format='vertical'] .hook {
+  padding-bottom: 80px;
+}
+[data-format='vertical'] .tagline .ar {
+  font-size: 44px;
+}
+[data-format='vertical'] .tagline .la {
+  font-size: 25px;
+}
+[data-format='vertical'] .lp {
+  left: 90px;
+  width: 900px;
+  text-align: center;
+}
+[data-format='vertical'] .lp-en {
+  text-align: center;
+}
+[data-format='vertical'] .lp-title {
+  font-size: 112px;
+}
+[data-format='vertical'] .gloss-chip {
+  align-items: center;
+}
+[data-format='vertical'] .wifi-card {
+  left: 120px;
+  width: 840px;
+}
+[data-format='vertical'] .pv-title {
+  font-size: 120px;
+}
+[data-format='vertical'] .pv-sub .ar {
+  font-size: 40px;
+}
+[data-format='vertical'] .pv-sub .la {
+  font-size: 23px;
+}
+[data-format='vertical'] .promises4 {
+  left: 90px;
+  right: 90px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 22px;
+}
+[data-format='vertical'] .f-head {
+  top: 150px;
+}
+[data-format='vertical'] .f-head .ar {
+  font-size: 68px;
+}
+[data-format='vertical'] .bento {
+  left: 60px;
+  right: 60px;
+  top: 330px;
+  bottom: auto;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: 320px 320px 360px 300px;
+  gap: 22px;
+}
+[data-format='vertical'] .c-img {
+  grid-column: 1 / span 2;
+  grid-row: 1;
+}
+[data-format='vertical'] .c-dia {
+  grid-column: 1;
+  grid-row: 2;
+}
+[data-format='vertical'] .c-eco {
+  grid-column: 2;
+  grid-row: 2;
+}
+[data-format='vertical'] .c-mdl {
+  grid-column: 1 / span 2;
+  grid-row: 3;
+}
+[data-format='vertical'] .c-thm {
+  grid-column: 1;
+  grid-row: 4;
+}
+[data-format='vertical'] .c-os {
+  grid-column: 2;
+  grid-row: 4;
+}
+[data-format='vertical'] .photo {
+  right: auto;
+  left: 30px;
+  bottom: 24px;
+  transform: scale(0.93);
+  transform-origin: 0 100%;
+}
+[data-format='vertical'] .vbubble {
+  left: auto;
+  right: 30px;
+  bottom: 34px;
+  width: 470px;
+}
+[data-format='vertical'] .c-img .ico-badge {
+  display: none;
+}
+[data-format='vertical'] .dia-lines {
+  margin-top: 14px;
+  height: 92px;
+}
+[data-format='vertical'] .tiers {
+  flex-direction: row;
+  gap: 14px;
+  margin-top: 22px;
+}
+[data-format='vertical'] .tier {
+  flex: 1;
+  min-width: 0;
+}
+[data-format='vertical'] .tier-top {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+[data-format='vertical'] .mdl-foot {
+  display: none;
+}
+[data-format='vertical'] .mini {
+  height: 132px;
+}
+[data-format='vertical'] .os-row {
+  gap: 8px;
+}
+[data-format='vertical'] .os-pill {
+  padding: 6px 18px;
+}
+[data-format='vertical'] .credit .ar {
+  font-size: 36px;
+}
+[data-format='vertical'] .credit .la {
+  font-size: 21px;
+}
+[data-format='vertical'] .cta {
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 920px;
+}

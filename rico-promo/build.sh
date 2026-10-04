@@ -11,3 +11,9 @@ node render/render.mjs --workers "${WORKERS:-4}" --out out/rico_promo_master.mp4
 ffmpeg -hide_banner -loglevel error -y -i out/rico_promo_master.mp4 -c:v libx264 -preset slow -crf 19 -tune film \
   -pix_fmt yuv420p -c:a copy -movflags +faststart out/rico_promo.mp4
 rm out/rico_promo_master.mp4
+
+# 9:16 Reels / Shorts version (same timeline and soundtrack, re-laid-out for a phone screen)
+node render/render.mjs --workers "${WORKERS:-4}" --format vertical --out out/rico_promo_reels_master.mp4
+ffmpeg -hide_banner -loglevel error -y -i out/rico_promo_reels_master.mp4 -c:v libx264 -preset slow -crf 19 -tune film \
+  -pix_fmt yuv420p -c:a copy -movflags +faststart out/rico_promo_reels.mp4
+rm out/rico_promo_reels_master.mp4

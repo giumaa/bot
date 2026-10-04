@@ -2,7 +2,7 @@
 // (renderAt(t) is pure, so ranges are independent) and pipe them into their own ffmpeg; the segments
 // are then concatenated and muxed with the mastered soundtrack.
 //
-//   node render/render.mjs [--workers 4] [--fps 60] [--from 0] [--to 64] [--scale 1] [--out out/rico_promo.mp4]
+//   node render/render.mjs [--workers 4] [--fps 60] [--from 0] [--to 64] [--scale 1] [--format vertical] [--out out/rico_promo.mp4]
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile, rm, stat } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -24,6 +24,9 @@ const FPS = Number(arg('fps', BASE_FPS));
 const FROM = Number(arg('from', 0));
 const TO = Number(arg('to', DURATION));
 const SCALE = Number(arg('scale', 1));
+const VERT = arg('format', 'landscape') === 'vertical';
+const VW = VERT ? 1080 : 1920;
+const VH = VERT ? 1920 : 1080;
 const OUT = arg('out', join(ROOT, 'out', 'rico_promo.mp4'));
 const AUDIO = arg('audio', join(ROOT, 'audio', 'soundtrack_master.m4a'));
 const CRF = arg('crf', SCALE < 1 ? '23' : '16');
@@ -38,8 +41,8 @@ await mkdir(join(ROOT, 'out'), { recursive: true });
 
 const { server, url } = await serve();
 const browser = await chromium.launch({ args: ['--font-render-hinting=none', '--force-color-profile=srgb', '--disable-lcd-text'] });
-const W = Math.round(1920 * SCALE);
-const H = Math.round(1080 * SCALE);
+const W = Math.round(VW * SCALE);
+const H = Math.round(VH * SCALE);
 
 let done = 0;
 const t0 = Date.now();
@@ -53,10 +56,10 @@ function progress() {
 }
 
 async function worker(k, a, b) {
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: SCALE });
+  const page = await browser.newPage({ viewport: { width: VW, height: VH }, deviceScaleFactor: SCALE });
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  await page.goto(`${url}index.html?capture=1`);
+  await page.goto(`${url}index.html?capture=1${VERT ? '&format=vertical' : ''}`);
   await page.waitForFunction(() => window.__promo);
   await page.evaluate(() => window.__promo.ready);
   const seg = join(TMP, `seg_${String(k).padStart(2, '0')}.mp4`);

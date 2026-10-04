@@ -4,7 +4,13 @@ A launch-style film for [Rico](https://github.com/giumaa/rico-ai), the offline L
 the hook types itself, the caret traces the kaf of the logo, the app boots and answers in Libyan dialect,
 the Wi‑Fi goes off and Rico keeps answering, then privacy, features and the download card.
 
-Final file: [`out/rico_promo.mp4`](out/rico_promo.mp4) (H.264 + AAC, −14 LUFS).
+Final files (H.264 + AAC, −14 LUFS):
+- [`out/rico_promo.mp4`](out/rico_promo.mp4) — 16:9, 1920×1080, 60 fps (YouTube, X, website)
+- [`out/rico_promo_reels.mp4`](out/rico_promo_reels.mp4) — 9:16, 1080×1920, 60 fps (Instagram / Facebook Reels, TikTok, Shorts)
+
+The Reels cut is the same film re-laid-out for a phone screen (`?format=vertical`): captions on top, the
+app window below, a 2-column bento, and key text kept between y≈240 and y≈1500 so the platform's caption
+and buttons don't cover it.
 
 ## Storyboard
 | Time | Scene | Sound |
@@ -38,9 +44,10 @@ Because picture and sound read the same `timeline.js`, moving a moment there mov
 ## Rebuild
 ```bash
 cd rico-promo
-./build.sh                       # ≈10 min on 4 cores
+./build.sh                       # both formats, ≈20 min on 4 cores
 node render/snap.mjs /tmp/stills 8.1 25.6 45   # stills for review
-node render/serve.mjs 8080       # live preview at http://127.0.0.1:8080 (click to play, ← → to seek)
+FORMAT=vertical node render/snap.mjs /tmp/v 25.6   # stills of the 9:16 cut
+node render/serve.mjs 8080       # live preview at http://127.0.0.1:8080 (?format=vertical for 9:16; click to play, ← → to seek)
 ```
 Needs Node 18+, Python 3 with numpy/scipy, ffmpeg and Playwright's Chromium.
 

@@ -12,6 +12,44 @@ const CAPTURE = params.has('capture');
 const stage = document.getElementById('stage');
 const $ = (root, sel) => root.querySelector(sel);
 
+// ---- format: 16:9 (default) or 9:16 for Reels (?format=vertical) -------------------------------
+const VERT = params.get('format') === 'vertical';
+const SW = VERT ? 1080 : 1920;
+const SH = VERT ? 1920 : 1080;
+document.documentElement.dataset.format = VERT ? 'vertical' : 'landscape';
+stage.style.width = `${SW}px`;
+stage.style.height = `${SH}px`;
+/** every position that depends on the frame shape (vertical keeps key text inside the Reels safe zone) */
+const LY = VERT
+  ? {
+      trace: { cx: 540, cy: 900, S: 560 },
+      up: { cx: 540, cy: 700, S: 300 },
+      caretH: 74,
+      word: { top: 880, size: 180 },
+      latin: { top: 1132, size: 44 },
+      tagTop: 1218,
+      dive: { x: 540, y: 520 },
+      shield: { cx: 540, cy: 470, S: 230 },
+      pv: { title: 640, sub: 822, grid: 980 },
+      lp: { dTitle: 250, dGloss: 540, wifi: [470, 560], oTitle: 250, zero: 760 },
+      outLogo: { cx: 540, cy: 560, S: 280 },
+      out: { word: 740, wordSize: 180, tag: 1012, credit: 1182, cta: 1330 },
+    }
+  : {
+      trace: { cx: 960, cy: 540, S: 500 },
+      up: { cx: 960, cy: 352, S: 252 },
+      caretH: 84,
+      word: { top: 492, size: 150 },
+      latin: { top: 690, size: 38 },
+      tagTop: 768,
+      dive: { x: 960, y: 268 },
+      shield: { cx: 960, cy: 222, S: 190 },
+      pv: { title: 392, sub: 548, grid: 706 },
+      lp: { dTitle: 200, dGloss: 452, wifi: [470, 548], oTitle: 250, zero: 744 },
+      outLogo: { cx: 960, cy: 300, S: 210 },
+      out: { word: 438, wordSize: 140, tag: 640, credit: 782, cta: 900 },
+    };
+
 // =====================================================================================================
 // helpers
 // =====================================================================================================
@@ -43,7 +81,9 @@ function wpos(el, fx = 0.5, fy = 0.5) {
 }
 const px = (v) => `${v.toFixed(2)}px`;
 function canvasLayer(parent) {
-  const c = h('canvas', { class: 'fx', width: 1920, height: 1080 });
+  const c = h('canvas', { class: 'fx', width: SW, height: SH });
+  c.style.width = `${SW}px`;
+  c.style.height = `${SH}px`;
   parent.appendChild(c);
   return c;
 }
@@ -64,7 +104,7 @@ const DUST = (() => {
   const r = rng(4242);
   return Array.from({ length: 120 }, () => ({
     x: r() * 1920,
-    y: r() * 1080,
+    y: r() * (VERT ? 1920 : 1080),
     z: 0.3 + r() * 0.7,
     vx: (r() - 0.5) * 9,
     vy: -4 - r() * 10,
@@ -74,11 +114,11 @@ const DUST = (() => {
 })();
 function drawDust(cv, t, alpha = 1, push = null) {
   const g = cv.getContext('2d');
-  g.clearRect(0, 0, 1920, 1080);
+  g.clearRect(0, 0, SW, SH);
   if (alpha <= 0) return;
   for (const p of DUST) {
-    let x = (((p.x + p.vx * t * p.z) % 1920) + 1920) % 1920;
-    let y = (((p.y + p.vy * t * p.z) % 1080) + 1080) % 1080;
+    let x = (((p.x + p.vx * t * p.z) % SW) + SW) % SW;
+    let y = (((p.y + p.vy * t * p.z) % SH) + SH) % SH;
     if (push) {
       const dx = x - push.x;
       const dy = y - push.y;
@@ -108,7 +148,7 @@ const SPARKS = (() => {
 })();
 function drawSparks(cv, dt, cx, cy, scale = 1, clear = true, r0 = 0) {
   const g = cv.getContext('2d');
-  if (clear) g.clearRect(0, 0, 1920, 1080);
+  if (clear) g.clearRect(0, 0, SW, SH);
   if (dt < 0 || dt > 1.8) return;
   const drag = 3.2;
   for (const s of SPARKS) {
@@ -242,16 +282,15 @@ function hookLine(R, sched, hl, t) {
   return n;
 }
 
-const LOGO_TRACE_S = 500;
 function logoLayout(t) {
   // centre + size of the intro logo
   const k = ep(t, ...K.logoUp, ease.inOutCubic);
-  return { cx: 960, cy: lerp(540, 352, k), S: lerp(LOGO_TRACE_S, 252, k) };
+  return { cx: lerp(LY.trace.cx, LY.up.cx, k), cy: lerp(LY.trace.cy, LY.up.cy, k), S: lerp(LY.trace.S, LY.up.S, k) };
 }
 
 function renderNight(t) {
   if (!show(night, t < K.reveal[1] + 0.05)) return;
-  drawDust(dustA, t, ep(t, 0, 1.2), t > K.bloom - 0.1 && t < K.bloom + 1.5 ? { x: 960, y: 540, k: ep(t, K.bloom, K.bloom + 1.2, ease.outCubic) * (1 - ep(t, K.bloom + 0.6, K.bloom + 2.5)) } : null);
+  drawDust(dustA, t, ep(t, 0, 1.2), t > K.bloom - 0.1 && t < K.bloom + 1.5 ? { x: LY.trace.cx, y: LY.trace.cy, k: ep(t, K.bloom, K.bloom + 1.2, ease.outCubic) * (1 - ep(t, K.bloom + 0.6, K.bloom + 2.5)) } : null);
 
   // ---- hook text (with a slow push-in)
   const hookOn = show(hook, t < K.glide[1] + 0.3);
@@ -301,14 +340,14 @@ function renderNight(t) {
   if (!L1.len) L1.len = L1.trace.getTotalLength();
   const start = glyphToStage(L1.trace.getPointAtLength(0), cx, cy, S);
   let cw = 11;
-  let ch = 84;
+  let ch = LY.caretH;
   let cpos = caretPos;
   if (t >= K.glide[0]) {
     const k = ep(t, ...K.glide, ease.inOutCubic);
     const from = caretPos ?? start;
     cpos = { x: lerp(from.x, start.x, k), y: lerp(from.y, start.y, k) };
     cw = lerp(11, 16, k);
-    ch = lerp(84, 16, k);
+    ch = lerp(LY.caretH, 16, k);
     cOp = lerp(cOp, 1, k);
   }
   const tp = ep(t, ...K.trace, ease.inOutCubic);
@@ -356,7 +395,7 @@ function renderNight(t) {
   const out = ep(t, ...K.logoTextOut, ease.inCubic);
   const wk = ep(t, ...K.wordmark, ease.outCubic);
   if (show(wordmark, wk > 0 && t < K.reveal[0] + 0.1)) {
-    css(wordmark, { top: '492px', fontSize: '150px', opacity: (1 - out).toFixed(3), filter: out > 0 ? `blur(${(out * 10).toFixed(2)}px)` : 'none', transform: `translate3d(0, ${(-16 * out).toFixed(2)}px, 0)` });
+    css(wordmark, { top: px(LY.word.top), fontSize: px(LY.word.size), opacity: (1 - out).toFixed(3), filter: out > 0 ? `blur(${(out * 10).toFixed(2)}px)` : 'none', transform: `translate3d(0, ${(-16 * out).toFixed(2)}px, 0)` });
     css(wordSpan, {
       clipPath: `inset(-30% 0 -30% ${((1 - wk) * 100).toFixed(2)}%)`,
       filter: wk < 1 ? `blur(${((1 - wk) * 10).toFixed(2)}px)` : 'none',
@@ -365,12 +404,12 @@ function renderNight(t) {
   }
   const lk = ep(t, ...K.latin, ease.outCubic) * (1 - out);
   if (show(latin, lk > 0)) {
-    css(latin, { top: '690px', fontSize: '38px', letterSpacing: `${lerp(0.7, 0.32, ep(t, ...K.latin, ease.outCubic)).toFixed(3)}em` });
+    css(latin, { top: px(LY.latin.top), fontSize: px(LY.latin.size), letterSpacing: `${lerp(0.7, 0.32, ep(t, ...K.latin, ease.outCubic)).toFixed(3)}em` });
     rise(latin, lk, { y: 10, blur: 8 });
   }
   const gk = ep(t, ...K.tagline, ease.outCubic) * (1 - out);
   if (show(tagline, gk > 0)) {
-    css(tagline, { top: '768px' });
+    css(tagline, { top: px(LY.tagTop) });
     rise(tagAr, gk, { y: 18, blur: 10 });
     rise(tagLa, ep(t, K.tagline[0] + 0.22, K.tagline[1] + 0.22, ease.outCubic) * (1 - out), { y: 12, blur: 8 });
   }
@@ -419,7 +458,26 @@ const swKnob = $(wifi, '.knob');
 
 // ---- camera keyframes: focus point (window coords) → stage point, with scale and 3D tilt ------------
 const mdFirst = () => A.md.querySelector('p') ?? A.md;
-const CAM = [
+const C0 = () => ({ x: 680, y: 430 });
+const CAM_V = [
+  { t: K.reveal[0], s: 1.1, f: () => ({ x: 534, y: 430 }), X: 540, Y: 960, ry: 0, rx: 0 },
+  { t: 13.7, s: 1.0, f: () => ({ x: 534, y: 430 }), X: 540, Y: 960, ry: 0, rx: 0 },
+  { t: 14.15, s: 1.0, f: () => ({ x: 534, y: 430 }), X: 540, Y: 960, ry: 0, rx: 0 },
+  { t: 15.4, s: 1.32, f: () => wpos(A.composer, 0.5, 0.0), X: 540, Y: 1160, ry: 0, rx: 0, e: ease.inOutQuart },
+  { t: 17.4, s: 1.36, f: () => wpos(A.composer, 0.5, 0.0), X: 540, Y: 1166, ry: 0, rx: 0, e: ease.inOutQuad },
+  { t: 18.45, s: 1.32, f: () => ({ x: 534, y: 330 }), X: 540, Y: 760, ry: 0, rx: 0, e: ease.inOutQuart },
+  { t: 24.0, s: 1.32, f: () => ({ x: 534, y: 420 }), X: 540, Y: 760, ry: 0, rx: 0, e: ease.inOutQuad },
+  { t: 24.6, s: 1.42, f: () => wpos(mdFirst(), 0.7, 0.5), X: 540, Y: 860, ry: 0, rx: 0, e: ease.inOutQuart },
+  { t: 25.9, s: 1.46, f: () => wpos(mdFirst(), 0.7, 0.5), X: 540, Y: 860, ry: 0, rx: 0, e: ease.inOutQuad },
+  { t: 26.9, s: 0.77, f: C0, X: 540, Y: 1370, ry: 0, rx: 9, e: ease.inOutQuart },
+  { t: 33.4, s: 0.79, f: C0, X: 540, Y: 1360, ry: 0, rx: 8, e: ease.inOutQuad },
+  { t: 34.6, s: 0.84, f: () => ({ x: 680, y: 400 }), X: 540, Y: 1330, ry: 0, rx: 7, e: ease.inOutCubic },
+  { t: 37.65, s: 0.85, f: () => ({ x: 680, y: 405 }), X: 540, Y: 1330, ry: 0, rx: 7, e: ease.inOutQuad },
+  { t: 38.55, s: 0.79, f: C0, X: 540, Y: 960, ry: 0, rx: 0, e: ease.inOutCubic },
+  { t: K.dive[0], s: 0.79, f: C0, X: 540, Y: 960, ry: 0, rx: 0 },
+  { t: K.dive[1], s: 7.5, f: C0, X: 540, Y: 960, ry: 0, rx: 0, dive: true },
+];
+const CAM_H = [
   { t: K.reveal[0], s: 1.07, f: () => ({ x: 680, y: 430 }), X: 960, Y: 540, ry: 0, rx: 0 },
   { t: 13.7, s: 1.0, f: () => ({ x: 680, y: 430 }), X: 960, Y: 540, ry: 0, rx: 0 },
   { t: 14.15, s: 1.0, f: () => ({ x: 680, y: 430 }), X: 960, Y: 540, ry: 0, rx: 0 },
@@ -437,6 +495,7 @@ const CAM = [
   { t: K.dive[0], s: 0.92, f: () => ({ x: 680, y: 430 }), X: 960, Y: 540, ry: 0, rx: 0 },
   { t: K.dive[1], s: 7.5, f: () => ({ x: 680, y: 430 }), X: 960, Y: 540, ry: 0, rx: 0, dive: true },
 ];
+const CAM = VERT ? CAM_V : CAM_H;
 function camAt(t) {
   let i = 1;
   while (i < CAM.length - 1 && t > CAM[i].t) i++;
@@ -451,7 +510,7 @@ function camAt(t) {
     const f0 = a.f();
     const x0 = a.X + a.s * (P.x - f0.x);
     const y0 = a.Y + a.s * (P.y - f0.y);
-    return { s, fx: P.x, fy: P.y, X: lerp(x0, 960, k), Y: lerp(y0, 268, k), ry: 0, rx: 0 };
+    return { s, fx: P.x, fy: P.y, X: lerp(x0, LY.dive.x, k), Y: lerp(y0, LY.dive.y, k), ry: 0, rx: 0 };
   }
   const fa = a.f();
   const fb = b.f();
@@ -582,14 +641,14 @@ function renderApp(t) {
   // reveal: parchment light opens from the logo
   const rk = ep(t, ...K.reveal, ease.inOutCubic);
   const R = rk * 2300;
-  const mask = rk < 1 ? `radial-gradient(circle at 960px 352px, #000 ${R.toFixed(1)}px, transparent ${(R + 1.5).toFixed(1)}px)` : 'none';
+  const mask = rk < 1 ? `radial-gradient(circle at ${LY.up.cx}px ${LY.up.cy}px, #000 ${R.toFixed(1)}px, transparent ${(R + 1.5).toFixed(1)}px)` : 'none';
   css(appScene, { maskImage: mask, webkitMaskImage: mask });
 
   const cam = camAt(t);
   // only enter a 3D context while the window is actually tilted: clip-path + 3D layers misrender
   // (black/noisy fill outside the circle) in software compositing
   const tilted = Math.abs(cam.ry) > 0.001 || Math.abs(cam.rx) > 0.001;
-  css(world, { perspective: tilted ? '2400px' : 'none' });
+  css(world, { perspective: tilted ? '2400px' : 'none', perspectiveOrigin: `${SW / 2}px ${SH / 2}px` });
   css(win, {
     transform: tilted
       ? `translate(${px(cam.X)}, ${px(cam.Y)}) rotateY(${cam.ry.toFixed(3)}deg) rotateX(${cam.rx.toFixed(3)}deg) scale(${cam.s.toFixed(4)}) translate(${px(-cam.fx)}, ${px(-cam.fy)})`
@@ -604,11 +663,11 @@ function renderLeftPanel(t) {
   const dOut = ep(t, ...K.dialectOut, ease.inCubic);
   const dOn = t > K.dialectTitle - 0.05 && t < K.dialectOut[1] + 0.05;
   if (show(dTitle, dOn)) {
-    css(dTitle, { top: '200px' });
+    css(dTitle, { top: px(LY.lp.dTitle) });
     rise(dTitle, ep(t, K.dialectTitle, K.dialectTitle + 0.65, ease.outCubic) * (1 - dOut), { y: 30, blur: 12 });
   }
   if (show(dGloss, dOn)) {
-    css(dGloss, { top: '452px', opacity: (1 - dOut).toFixed(3), filter: dOut > 0 ? `blur(${(dOut * 10).toFixed(2)}px)` : 'none' });
+    css(dGloss, { top: px(LY.lp.dGloss), opacity: (1 - dOut).toFixed(3), filter: dOut > 0 ? `blur(${(dOut * 10).toFixed(2)}px)` : 'none' });
     glossChips.forEach((chip, i) => {
       const a = K.glossary[i];
       const k = springStep(prog(t, a, a + 0.7), { damping: 0.5, freq: 1.7 });
@@ -624,7 +683,7 @@ function renderLeftPanel(t) {
     const k = springStep(prog(t, K.wifiCard[0], K.wifiCard[0] + 0.8), { damping: 0.55, freq: 1.6 });
     const lift = ep(t, K.offline1 - 0.1, K.offline1 + 0.5, ease.inOutCubic);
     css(wifi, {
-      top: px(lerp(470, 548, lift)),
+      top: px(lerp(LY.lp.wifi[0], LY.lp.wifi[1], lift)),
       opacity: (ep(t, ...K.wifiCard) * (1 - oOut)).toFixed(3),
       transform: `translate3d(0, ${((1 - k) * 30).toFixed(2)}px, 0) scale(${lerp(0.9, 1, k).toFixed(4)})`,
       filter: oOut > 0 ? `blur(${(oOut * 10).toFixed(2)}px)` : 'none',
@@ -642,16 +701,17 @@ function renderLeftPanel(t) {
   }
   const swap = ep(t, K.offline2, K.offline2 + 0.35, ease.inCubic);
   if (show(oTitle1, oOn && t >= K.offline1 - 0.05 && swap < 1)) {
-    css(oTitle1, { top: '250px' });
+    css(oTitle1, { top: px(LY.lp.oTitle) });
     rise(oTitle1, ep(t, K.offline1, K.offline1 + 0.6, ease.outCubic) * (1 - swap), { y: 30, blur: 12 });
   }
   if (show(oTitle2, oOn && t >= K.offline2 + 0.1)) {
-    css(oTitle2, { top: '250px' });
+    css(oTitle2, { top: px(LY.lp.oTitle) });
     rise(oTitle2, ep(t, K.offline2 + 0.15, K.offline2 + 0.75, ease.outCubic) * (1 - oOut), { y: 30, blur: 12 });
   }
   if (show(zero, oOn && t >= K.zeroBytes - 0.05)) {
     const k = springStep(prog(t, K.zeroBytes, K.zeroBytes + 0.7), { damping: 0.55, freq: 1.7 });
-    css(zero, { top: '744px', opacity: (ep(t, K.zeroBytes, K.zeroBytes + 0.2) * (1 - oOut)).toFixed(3), transform: `translate3d(0, ${((1 - k) * 16).toFixed(2)}px, 0) scale(${lerp(0.85, 1, k).toFixed(4)})` });
+    if (VERT) css(zero, { right: 'auto', left: px((SW - zero.offsetWidth) / 2) });
+    css(zero, { top: px(LY.lp.zero), opacity: (ep(t, K.zeroBytes, K.zeroBytes + 0.2) * (1 - oOut)).toFixed(3), transform: `translate3d(0, ${((1 - k) * 16).toFixed(2)}px, 0) scale(${lerp(0.85, 1, k).toFixed(4)})` });
   }
 }
 
@@ -694,7 +754,7 @@ const shGold = $(flyShield, '.sh-gold');
 const shFill = $(flyShield, '.sh-fill');
 const ckGreen = $(flyShield, '.ck-green');
 const ckGold = $(flyShield, '.ck-gold');
-const SHIELD_FINAL = { cx: 960, cy: 222, S: 190 };
+const SHIELD_FINAL = LY.shield;
 
 function renderPrivacy(t) {
   const on = show(privacy, t >= K.dive[1] - 0.32 && t < K.wipe[1] + 0.1);
@@ -735,12 +795,12 @@ function renderPrivacy(t) {
   const ro = rk > 0 && rk < 1 ? (1 - rk) * 0.8 : 0;
   css(pvRing, { left: px(cx - RS / 2), top: px(cy - RS / 2), width: px(RS), height: px(RS), opacity: ro.toFixed(3), visibility: ro > 0 ? 'visible' : 'hidden' });
 
-  css(pvTitle, { top: '392px' });
+  css(pvTitle, { top: px(LY.pv.title) });
   rise(pvTitle, ep(t, K.privacyTitle, K.privacyTitle + 0.65, ease.outCubic) * (1 - out), { y: 30, blur: 12 });
-  css(pvSub, { top: '548px' });
+  css(pvSub, { top: px(LY.pv.sub) });
   rise(pvSubAr, ep(t, K.privacyTitle + 0.2, K.privacyTitle + 0.85, ease.outCubic) * (1 - out), { y: 20, blur: 10 });
   rise(pvSubLa, ep(t, K.privacyTitle + 0.38, K.privacyTitle + 1.0, ease.outCubic) * (1 - out), { y: 14, blur: 8 });
-  css(pvGrid, { top: '706px' });
+  css(pvGrid, { top: px(LY.pv.grid) });
   prCards.forEach((card, i) => {
     const a = K.promises[i];
     const k = springStep(prog(t, a, a + 0.8), { damping: 0.55, freq: 1.6 });
@@ -850,7 +910,7 @@ function renderFeatures(t) {
     return;
   }
   const wk = ep(t, ...K.wipe, ease.inOutCubic);
-  const X = 1920 * (1 - wk);
+  const X = SW * (1 - wk);
   css(features, { clipPath: wk < 1 ? `inset(0 0 0 ${X.toFixed(1)}px)` : 'none' });
   if (show(wipeEdge, wk > 0 && wk < 1)) css(wipeEdge, { left: px(X) });
 
@@ -862,9 +922,9 @@ function renderFeatures(t) {
     const k = springStep(prog(t, a, a + 0.85), { damping: 0.55, freq: 1.5 });
     const o = ep(t, a, a + 0.22);
     // exit: everything is pulled toward the centre where the outro logo blooms
-    const r = card.__home ?? (card.__home = { x: card.offsetLeft + card.offsetWidth / 2 + 120, y: card.offsetTop + card.offsetHeight / 2 + 268 });
-    const dx = (960 - r.x) * out * 0.85;
-    const dy = (540 - r.y) * out * 0.85;
+    const r = card.__home ?? (card.__home = { x: card.offsetLeft + card.offsetWidth / 2 + bento.offsetLeft, y: card.offsetTop + card.offsetHeight / 2 + bento.offsetTop });
+    const dx = (SW / 2 - r.x) * out * 0.85;
+    const dy = (SH / 2 - r.y) * out * 0.85;
     css(card, {
       opacity: (o * (1 - out)).toFixed(3),
       transform: `translate3d(${dx.toFixed(2)}px, ${((1 - k) * 46 + dy).toFixed(2)}px, 0) scale(${(lerp(0.88, 1, k) * (1 - 0.5 * out)).toFixed(4)})`,
@@ -961,7 +1021,7 @@ const oCredit = h('div', { class: 'credit' }, `<span class="ar">${TXT.credit}</s
 const oCta = h('div', { class: 'cta' }, `<span class="btn-like">${icon('download')}${TXT.cta}</span><span class="url">${TXT.url}</span><span class="os">${TXT.platforms}</span>`);
 outro.append(oWord, oTag, oCredit, oCta);
 const oWordSpan = oWord.firstElementChild;
-const OUT_LOGO = { cx: 960, cy: 300, S: 210 };
+const OUT_LOGO = LY.outLogo;
 
 function renderOutro(t) {
   if (!show(outro, t >= 55.25)) return;
@@ -981,21 +1041,21 @@ function renderOutro(t) {
   drawSparks(sparksB, t - K.outroBloom, cx, cy, 0.62, true, S * 0.36);
 
   const wk = ep(t, ...K.outroWord, ease.outCubic);
-  css(oWord, { top: '438px', fontSize: '140px' });
+  css(oWord, { top: px(LY.out.word), fontSize: px(LY.out.wordSize) });
   css(oWordSpan, {
     clipPath: `inset(-30% 0 -30% ${((1 - wk) * 100).toFixed(2)}%)`,
     filter: wk < 1 ? `blur(${((1 - wk) * 10).toFixed(2)}px)` : 'none',
     transform: `scale(${lerp(0.94, 1, wk).toFixed(4)})`,
     opacity: wk > 0 ? '1' : '0',
   });
-  css(oTag, { top: '640px' });
+  css(oTag, { top: px(LY.out.tag) });
   rise($(oTag, '.ar'), ep(t, ...K.outroTag, ease.outCubic), { y: 18, blur: 10 });
   rise($(oTag, '.la'), ep(t, K.outroTag[0] + 0.22, K.outroTag[1] + 0.22, ease.outCubic), { y: 12, blur: 8 });
-  css(oCredit, { top: '782px' });
+  css(oCredit, { top: px(LY.out.credit) });
   rise($(oCredit, '.ar'), ep(t, ...K.credit, ease.outCubic), { y: 14, blur: 8 });
   rise($(oCredit, '.la'), ep(t, K.credit[0] + 0.18, K.credit[1] + 0.18, ease.outCubic), { y: 10, blur: 6 });
   const ck = springStep(prog(t, K.cta[0], K.cta[0] + 0.8), { damping: 0.55, freq: 1.6 });
-  css(oCta, { top: '900px', opacity: ep(t, K.cta[0], K.cta[0] + 0.25).toFixed(3), transform: `translate(-50%, ${((1 - ck) * 24).toFixed(2)}px) scale(${lerp(0.9, 1, ck).toFixed(4)})` });
+  css(oCta, { top: px(LY.out.cta), opacity: ep(t, K.cta[0], K.cta[0] + 0.25).toFixed(3), transform: `translate(-50%, ${((1 - ck) * 24).toFixed(2)}px) scale(${lerp(0.9, 1, ck).toFixed(4)})` });
 }
 
 // =====================================================================================================
@@ -1017,9 +1077,9 @@ function renderFly(t) {
   if (on) {
     const k = ep(t, ...K.reveal, ease.inOutCubic);
     const target = srect($(A.heroMark, 'svg'));
-    const S = lerp(252, target.w, k);
-    const cx = lerp(960, target.cx, k);
-    const cy = lerp(352, target.cy, k);
+    const S = lerp(LY.up.S, target.w, k);
+    const cx = lerp(LY.up.cx, target.cx, k);
+    const cy = lerp(LY.up.cy, target.cy, k);
     css(flySvg, { left: px(cx - S / 2), top: px(cy - S / 2), width: px(S), height: px(S) });
     const AS = S * 2.3;
     css(flyAura, { left: px(cx - AS / 2), top: px(cy - AS / 2), width: px(AS), height: px(AS), opacity: (0.9 * (1 - k * 0.6)).toFixed(3) });
@@ -1027,7 +1087,7 @@ function renderFly(t) {
   const rk = ep(t, ...K.reveal, ease.inOutCubic);
   if (show(revealRing, rk > 0 && rk < 1)) {
     const R = rk * 2300;
-    css(rr, { left: px(960 - R), top: px(352 - R), width: px(2 * R), height: px(2 * R), opacity: (0.85 * (1 - ep(t, K.reveal[0] + 0.5, K.reveal[1]))).toFixed(3) });
+    css(rr, { left: px(LY.up.cx - R), top: px(LY.up.cy - R), width: px(2 * R), height: px(2 * R), opacity: (0.85 * (1 - ep(t, K.reveal[0] + 0.5, K.reveal[1]))).toFixed(3) });
   }
 }
 
@@ -1154,7 +1214,7 @@ function sizeHookLines() {
 }
 function fit() {
   if (CAPTURE) return;
-  stageScale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  stageScale = Math.min(window.innerWidth / SW, window.innerHeight / SH);
   stage.style.transform = `scale(${stageScale})`;
 }
 
