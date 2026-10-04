@@ -8,3 +8,10 @@ checkmate/audio/sfx/
 checkmate/audio/*.wav
 __pycache__/
 checkmate/out/*.mp4
+# rico-promo generated media (reproducible: rico-promo/build.sh)
+rico-promo/render/tmp/
+rico-promo/render/*.log
+rico-promo/audio/*.wav
+rico-promo/audio/stems/
+rico-promo/web/soundtrack.m4a
+rico-promo/out/test_*.mp4

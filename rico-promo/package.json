@@ -1,0 +1,11 @@
+{
+  "name": "rico-promo",
+  "private": true,
+  "type": "module",
+  "description": "Rico promo film: deterministic HTML animation rendered with Playwright + synthesized soundtrack",
+  "scripts": {
+    "cues": "node render/export-cues.mjs",
+    "snap": "node render/snap.mjs",
+    "render": "node render/render.mjs"
+  }
+}
