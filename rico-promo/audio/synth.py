@@ -670,6 +670,58 @@ def sfx_dive(c):
     return fade(out, 0.01, 0.2)
 
 
+def sfx_slam(c):
+    """the hook hit: punchy sub drop + crack + short air tail (opens the reel)"""
+    n = int(1.8 * SR)
+    t = tvec(n)
+    f = 38 + 90 * np.exp(-t / 0.06)
+    sub = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.55) * np.minimum(1, t / 0.002)
+    crack = hp(noise(n, 501), 1800) * np.exp(-t / 0.018) * 0.9
+    body = bp(noise(n, 502), 120, 900) * np.exp(-t / 0.09) * 0.7
+    air = hp(noise(n, 503), 4500) * np.exp(-t / 0.35) * 0.12
+    x = np.tanh(1.6 * (norm(sub, 1.0) + crack + body)) / np.tanh(1.6) + air
+    st = np.stack([x * 1.0, x * 0.96], axis=1)
+    st[:, 1] = np.roll(st[:, 1], int(0.004 * SR))  # a touch of width
+    return fade(norm(st, 0.9), 0.0005, 0.3)
+
+
+def sfx_glitch(c):
+    """signal lost: stuttered, bit-crushed bursts (airplane mode on)"""
+    dur = float(c.get('dur', 0.45))
+    n = int((dur + 0.1) * SR)
+    out = np.zeros(n)
+    r = rng(611)
+    t = 0.0
+    k = 0
+    while t < dur:
+        ln = 0.012 + 0.03 * r.random()
+        m = int(ln * SR)
+        i = int(t * SR)
+        seg = np.sign(np.sin(2 * np.pi * (300 + 2200 * r.random()) * tvec(m))) * 0.5
+        seg += bp(noise(m, 620 + k), 800, 6000) * 0.8
+        hold = int(1 + 6 * r.random())  # sample-and-hold "bit crush"
+        seg = np.repeat(seg[::hold], hold)[:m]
+        out[i: i + m] += seg[: n - i] * np.exp(-tvec(m) / (ln * 0.8))[: n - i] * (1 - t / dur * 0.6)
+        t += ln + 0.02 * r.random()
+        k += 1
+    return pan_sweep(fade(norm(lp(out, 7000), 0.6), 0.001, 0.05), -0.3, 0.3)
+
+
+def sfx_shutter(c):
+    """phone camera: two mechanical clicks and a short air breath"""
+    n = int(0.4 * SR)
+    t = tvec(n)
+    out = np.zeros(n)
+    for k, at in enumerate((0.0, 0.085)):
+        i = int(at * SR)
+        tt = tvec(n - i)
+        s = hp(noise(n - i, 700 + k), 1500) * np.exp(-tt / 0.004) + np.sin(2 * np.pi * (1900 - 500 * k) * tt) * np.exp(-tt / 0.01) * 0.5
+        s += np.sin(2 * np.pi * 220 * tt) * np.exp(-tt / 0.02) * 0.4
+        out[i:] += s * (1.0 - 0.3 * k)
+    out += bp(noise(n, 710), 2000, 8000) * np.exp(-t / 0.06) * 0.2
+    return stereo(fade(norm(out, 0.8), 0.0003, 0.03))
+
+
 SFX = {k[4:]: v for k, v in globals().items() if k.startswith('sfx_')}
 
 
@@ -706,23 +758,34 @@ def build_music():
     motif_bus = Bus()
     kick_times = []
 
+    # arrangement knobs (defaults = the 64 s film; the reel overrides them in its MUSIC plan)
+    intro_bars = M.get('introBars', 4)
+    drop_bar = M.get('dropBar', 16)
+    arp_end = M.get('arpEndBar', 30)
+    outro_bar = M.get('outroBar', 28)
+    quiet = set(M.get('quietBars', list(range(4, 8)) + list(range(20, 24)) + list(range(28, 32))))
+    split = set(M.get('padSplit', [4, 28]))
+    accents = M.get('accents', [[16.0, ['A5', 'D6']], [34.0, ['D6', 'F6']], [40.0, ['D6']], [48.0, ['D6', 'A6']], [58.0, ['A5', 'D6', 'F6']]])
+    light_clap_from = M.get('lightClapFrom', 20)
+    pad_attack0 = M.get('padAttack0', 2.6)
+
     # ---- pads: merge repeated chords into one long note
     segs = []
     for b, ch in enumerate(chords):
-        if segs and segs[-1][0] == ch and b not in (4, 28):
+        if segs and segs[-1][0] == ch and b not in split:
             segs[-1][2] += 1
         else:
             segs.append([ch, b, 1])
     for k, (ch, b0, nbars) in enumerate(segs):
         t0 = b0 * BAR
         dur = nbars * BAR
-        attack = 2.6 if b0 == 0 else 0.35
-        seg = pad_segment(PAD[ch], dur + 0.15, seed=k + 1, attack=attack, release=1.6 if b0 < 28 else 4.0)
+        attack = pad_attack0 if b0 == 0 else 0.35
+        seg = pad_segment(PAD[ch], dur + 0.15, seed=k + 1, attack=attack, release=1.6 if b0 < outro_bar else 4.0)
         pad_bus.add(seg, t0 - 0.05)
 
     # ---- bass
     for b, ch in enumerate(chords):
-        if b < 4:
+        if b < intro_bars:
             continue
         f = nf(ROOT[ch])
         t0 = b * BAR
@@ -730,19 +793,19 @@ def build_music():
         if dr >= 2:
             for st, ln in ((0, 5.5), (6, 3.5), (10, 5.5)):
                 bass_bus.add(bass_note(f, ln * STEP, seed=b * 10 + st), t0 + st * STEP, -1.0 if st else 0.0)
-        elif b == 16:
+        elif b == drop_bar:
             continue  # the drop: no bass
         else:
             bass_bus.add(bass_note(f, BAR - 0.05, seed=b), t0, -2.0)
 
     # ---- plucked arpeggio (8ths), skipped in the intro, the drop bar and the final bars
     for b, ch in enumerate(chords):
-        if b < 4 or b == 16 or b >= 30:
+        if b < intro_bars or b == drop_bar or b >= arp_end:
             continue
         t0 = b * BAR
-        lvl = -3.0 if (4 <= b < 8 or 20 <= b < 24 or b >= 28) else 0.0
+        lvl = -3.0 if b in quiet else 0.0
         tones = ARP[ch]
-        step = 2 if b < 28 else 4  # outro: quarter notes
+        step = 2 if b < outro_bar else 4  # outro: quarter notes
         for i in range(0, 16, step):
             nm = tones[ARP_PATTERN[(i // 2) % 8]]
             acc = 0.0 if i % 8 == 0 else (-2.5 if i % 4 == 0 else -4.5)
@@ -750,7 +813,7 @@ def build_music():
             arp_bus.add(p, t0 + i * STEP, lvl + acc, pan=0.35 * np.sin(i * 0.9 + b))
 
     # ---- accent bells on section starts
-    for t, notes in ((16.0, ('A5', 'D6')), (34.0, ('D6', 'F6')), (40.0, ('D6',)), (48.0, ('D6', 'A6')), (58.0, ('A5', 'D6', 'F6'))):
+    for t, notes in accents:
         for k, nm in enumerate(notes):
             bell_bus.add(bell(nf(nm), 3.5, ratio=3.5, index=1.6, decay=1.4, seed=int(t * 10) + k), t + k * 0.03, -3.0, pan=-0.3 + 0.6 * k / max(1, len(notes) - 1))
     # reverse swell into the beat's return after the drop
@@ -787,7 +850,7 @@ def build_music():
                     kick_times.append(t0 + i * STEP)
                 if i == 8:
                     drum_bus.add(clap(b), t0 + i * STEP, -5.0, pan=0.05)
-            elif dr == 1 and i == 8 and b >= 20:
+            elif dr == 1 and i == 8 and b >= light_clap_from:
                 drum_bus.add(clap(b), t0 + i * STEP, -11.0)
             if dr == 3 and i == 14:
                 drum_bus.add(hat(b, open_=True), tt, -13.0, pan=-0.3)
@@ -819,8 +882,10 @@ def music_eq(x):
 
     def cutoff(tt):
         c = np.full_like(tt, 16000.0)
-        intro = tt < 8.0
-        c[intro] = 650 * (9000 / 650) ** np.clip((tt[intro] - 2.0) / 6.0, 0, 1) ** 2.2
+        ie = M.get('introEnd', 8.0)
+        if ie > 0:
+            intro = tt < ie
+            c[intro] = 650 * (9000 / 650) ** np.clip((tt[intro] - (ie - 6.0)) / 6.0, 0, 1) ** 2.2
         drop = (tt >= d0) & (tt < d1)
         u_in = np.clip((tt - d0) / 0.12, 0, 1)
         u_out = np.clip((tt - (d1 - 0.5)) / 0.5, 0, 1)

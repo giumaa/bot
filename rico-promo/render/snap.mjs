@@ -7,7 +7,7 @@ import { serve } from './serve.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH ?? '/opt/node22/lib/node_modules/playwright');
 
-const VERT = process.env.FORMAT === 'vertical';
+const VERT = process.env.FORMAT === 'vertical' || (process.env.PAGE ?? '').startsWith('reel');
 const [outDir, ...rest] = process.argv.slice(2);
 const times = rest.map(Number);
 await mkdir(outDir, { recursive: true });
@@ -17,7 +17,7 @@ const page = await browser.newPage({ viewport: VERT ? { width: 1080, height: 192
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-await page.goto(`${url}index.html?capture=1${VERT ? '&format=vertical' : ''}`);
+await page.goto(`${url}${process.env.PAGE ?? 'index.html'}?capture=1${VERT ? '&format=vertical' : ''}`);
 await page.waitForFunction(() => window.__promo);
 await page.evaluate(() => window.__promo.ready);
 for (const t of times) {

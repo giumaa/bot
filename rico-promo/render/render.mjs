@@ -9,7 +9,9 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serve } from './serve.mjs';
-import { DURATION, FPS as BASE_FPS } from '../web/timeline.js';
+import { DURATION as FILM_DURATION, FPS as BASE_FPS } from '../web/timeline.js';
+import { DURATION as REEL_DURATION } from '../web/reel-timeline.js';
+const DURATION = (process.env.PAGE ?? '').startsWith('reel') ? REEL_DURATION : FILM_DURATION;
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH ?? '/opt/node22/lib/node_modules/playwright');
@@ -24,7 +26,7 @@ const FPS = Number(arg('fps', BASE_FPS));
 const FROM = Number(arg('from', 0));
 const TO = Number(arg('to', DURATION));
 const SCALE = Number(arg('scale', 1));
-const VERT = arg('format', 'landscape') === 'vertical';
+const VERT = arg('format', 'landscape') === 'vertical' || (process.env.PAGE ?? '').startsWith('reel');
 const VW = VERT ? 1080 : 1920;
 const VH = VERT ? 1920 : 1080;
 const OUT = arg('out', join(ROOT, 'out', 'rico_promo.mp4'));
@@ -59,7 +61,7 @@ async function worker(k, a, b) {
   const page = await browser.newPage({ viewport: { width: VW, height: VH }, deviceScaleFactor: SCALE });
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  await page.goto(`${url}index.html?capture=1${VERT ? '&format=vertical' : ''}`);
+  await page.goto(`${url}${process.env.PAGE ?? 'index.html'}?capture=1${VERT ? '&format=vertical' : ''}`);
   await page.waitForFunction(() => window.__promo);
   await page.evaluate(() => window.__promo.ready);
   const seg = join(TMP, `seg_${String(k).padStart(2, '0')}.mp4`);

@@ -1,0 +1,104 @@
+/* Copied verbatim from giumaa/rico-ai mobile/src/android.css (Android adaptations of the renderer). */
+/*
+ * Android adaptations of the desktop renderer (loaded AFTER the renderer's own CSS). Everything is scoped to
+ * html[data-platform='android'], so the shared renderer is untouched on desktop. The layout itself is already responsive
+ * (<= 880px = slide-in drawer); this only adds touch sizing, phone wording and de-desktopifies a few controls.
+ */
+
+html[data-platform='android'] {
+  --sidebar-w: min(86vw, 340px);
+  --header-h: 56px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-platform='android'] body {
+  overscroll-behavior: none;
+  touch-action: manipulation; /* no 300ms tap delay, no double-tap zoom */
+}
+
+/* ---- touch targets (>= 44px) ------------------------------------------------------------------------------------ */
+html[data-platform='android'] .btn {
+  min-height: 46px;
+}
+html[data-platform='android'] .btn-sm {
+  min-height: 44px;
+  padding-inline: 16px;
+}
+html[data-platform='android'] .icon-btn {
+  width: 44px;
+  height: 44px;
+}
+html[data-platform='android'] .icon-btn-sm {
+  width: 40px;
+  height: 40px;
+}
+html[data-platform='android'] .sb-item-btn {
+  min-height: 48px;
+}
+/* the "more" menu of a chat has no hover on a phone: keep it visible */
+html[data-platform='android'] .sb-item-more {
+  opacity: 1;
+}
+html[data-platform='android'] .model-pill {
+  height: 40px;
+  max-width: 44vw;
+}
+
+/* ---- desktop-only affordances ----------------------------------------------------------------------------------- */
+html[data-platform='android'] .sb-new kbd,
+html[data-platform='android'] .composer-hint,
+html[data-platform='android'] .drop-overlay,
+html[data-platform='android'] .data-path .btn {
+  display: none !important;
+}
+
+/* ---- layout ----------------------------------------------------------------------------------------------------- */
+html[data-platform='android'] .main-header {
+  padding-inline: 8px;
+  gap: 4px;
+}
+html[data-platform='android'] .composer-wrap {
+  padding: 0 10px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+html[data-platform='android'] .composer {
+  border-radius: 26px;
+  padding-inline: 16px 6px;
+}
+html[data-platform='android'] .composer-input {
+  font-size: 1.125rem;
+}
+html[data-platform='android'] .modal-layer {
+  padding: 12px;
+}
+html[data-platform='android'] .modal-body {
+  padding-inline: 16px;
+}
+html[data-platform='android'] .modal-head {
+  padding-inline: 16px 8px;
+}
+html[data-platform='android'] .onb-inner {
+  padding-inline: 16px;
+}
+html[data-platform='android'] .mdl-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ---- phone wording of the model cards ----------------------------------------------------------------------------
+ * The native plugin writes the RAM guidance ("إذا تلفونك فيه 4 أو 6 جيجا رام — هذا ليك") as the second line of the
+ * description, so the desktop RAM line (which says "computer") is hidden. */
+html[data-platform='android'] .mdl-ram {
+  display: none;
+}
+html[data-platform='android'] .mdl-desc {
+  white-space: pre-line;
+}
+html[data-platform='android'] .mdl-desc::first-line {
+  color: var(--text-2);
+}
+
+/* ---- touch scrolling: no desktop scrollbar gutter (the page scrolls by touch) ------------------------------------- */
+html[data-platform='android'] ::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
